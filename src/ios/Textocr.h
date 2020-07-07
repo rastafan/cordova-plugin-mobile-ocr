@@ -7,6 +7,6 @@
 
 - (void) recText:(CDVInvokedUrlCommand*)command;
 - (UIImage *)resizeImage:(UIImage *)image;
-- (NSData *)retrieveAssetDataPhotosprovaFramework:(NSURL *)urlMedia;
+- (NSData *)retrieveAssetDataPhotosFramework:(NSURL *)urlMedia;
 
 @end
