@@ -2,7 +2,6 @@
 #import <Photos/Photos.h>
 
 @import UIKit;
-@import Firebase;
 @import MLKit;
 
 @implementation Textocr
@@ -16,7 +15,6 @@
 
 - (BOOL)application:(UIApplication *)application
     didFinishLaunchingWithOptions:(NSDictionary *)launchOptions {
-  [FIRApp configure];
   return YES;
 }
 

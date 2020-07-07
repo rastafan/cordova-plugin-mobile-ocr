@@ -61,10 +61,6 @@
                 <source url="https://cdn.cocoapods.org/"/>
             </config>
             <pods use-frameworks="true">
-                <pod name="Firebase/Core"/>
-                <pod name="Firebase/MLVision"/>
-                <pod name="Firebase/MLVisionTextModel"/>
-                <pod name="Firebase/MLVisionLabelModel"/>
                 <pod name="GoogleMLKit/TextRecognition"/>
             </pods>
         </podspec>
