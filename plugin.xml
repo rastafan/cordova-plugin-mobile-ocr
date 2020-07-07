@@ -58,13 +58,15 @@
 <header-file src="src/ios/Textocr.h" target-dir="OcrPlugin"/>
 <source-file src="src/ios/Textocr.m" target-dir="OcrPlugin"/>
 
-<framework src="Firebase/Core" type="podspec"/>
-<framework src="Firebase/MLVision" type="podspec"/>
-<framework src="Firebase/MLVisionTextModel" type="podspec"/>
-<framework src="Firebase/MLVisionFaceModel" type="podspec"/>
-<framework src="Firebase/MLVisionBarcodeModel" type="podspec"/>
-<framework src="Firebase/MLVisionLabelModel" type="podspec"/>
-<framework src="GoogleMLKit/TextRecognition" type="podspec"/>
+<podspec>
+  <pods use-frameworks="true">
+	<pod name="Firebase/Core"/>
+	<pod name="Firebase/MLVision"/>
+	<pod name="Firebase/MLVisionTextModel"/>
+	<pod name="Firebase/MLVisionLabelModel"/>
+	<pod name="GoogleMLKit/TextRecognition"/>
+  </pods>
+</podspec>
  
 </platform>
 
