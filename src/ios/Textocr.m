@@ -1,6 +1,10 @@
 #import "Textocr.h"
 #import <Photos/Photos.h>
 
+@import UIKit;
+@import Firebase;
+@import MLKit;
+
 @implementation Textocr
 #define NORMFILEURI ((int) 0)
 #define NORMNATIVEURI ((int) 1)
@@ -8,15 +12,23 @@
 #define FASTNATIVEURI ((int) 3)
 #define BASE64 ((int) 4)
 
+
+
+- (BOOL)application:(UIApplication *)application
+    didFinishLaunchingWithOptions:(NSDictionary *)launchOptions {
+  [FIRApp configure];
+  return YES;
+}
+
 - (void)recText:(CDVInvokedUrlCommand*)command
 {
     [self.commandDelegate runInBackground:^{
-        _commandglo = command;
+        self->_commandglo = command;
         int stype = NORMFILEURI; // sourceType
         NSString* name;
         self.image = NULL;
         @try {
-            NSString *st = [[_commandglo arguments] objectAtIndex:0];
+            NSString *st = [[self->_commandglo arguments] objectAtIndex:0];
             stype = [st intValue];
             // 0 NORMFILEURI
             // 1 NORMNATIVEURI
@@ -24,13 +36,13 @@
             // 3 FASTNATIVEURI
             // 4 BASE64
             
-            name = [[_commandglo arguments] objectAtIndex:1];
+            name = [[self->_commandglo arguments] objectAtIndex:1];
         }
         @catch (NSException *exception) {
             CDVPluginResult* result = [CDVPluginResult
                                        resultWithStatus:CDVCommandStatus_ERROR
                                        messageAsString:@"argument/parameter type mismatch error"];
-            [self.commandDelegate sendPluginResult:result callbackId:_commandglo.callbackId];
+            [self.commandDelegate sendPluginResult:result callbackId:self->_commandglo.callbackId];
         }
         
         if (stype == NORMFILEURI || stype == NORMNATIVEURI || stype == FASTFILEURI || stype == FASTNATIVEURI)
@@ -73,15 +85,31 @@
             CDVPluginResult* result = [CDVPluginResult
                                        resultWithStatus:CDVCommandStatus_ERROR
                                        messageAsString:@"sourceType argument should be 0,1,2,3 or 4"];
-            [self.commandDelegate sendPluginResult:result callbackId:_commandglo.callbackId];
+            [self.commandDelegate sendPluginResult:result callbackId:self->_commandglo.callbackId];
         }
         
         
         if (self.image!=NULL)
         {
-            self.textDetector = [GMVDetector detectorOfType:GMVDetectorTypeText options:nil];
-            NSArray<GMVTextBlockFeature *> *features = [self.textDetector featuresInImage:self.image
-                                                                                  options:nil];
+            
+            MLKVisionImage *visionImage = [[MLKVisionImage alloc] initWithImage:self.image];
+            visionImage.orientation = self.image.imageOrientation;
+
+            MLKTextRecognizer *textRecognizer = [MLKTextRecognizer textRecognizer];
+
+            [textRecognizer processImage:visionImage
+                  completion:^(MLKText *_Nullable result,
+                               NSError *_Nullable error) {
+              if (error != nil || result == nil) {
+                // Error handling
+                return;
+              }
+              // Recognized text
+                
+                
+            //self.textDetector = [GMVDetector detectorOfType:GMVDetectorTypeText options:nil];
+            //NSArray<GMVTextBlockFeature *> *features = [self.textDetector featuresInImage:self.image
+            //                                                                      options:nil];
             int count = 0;
             
             NSMutableDictionary* resultobjmut = [[NSMutableDictionary alloc] init];
@@ -105,16 +133,16 @@
             NSMutableArray* wordframe = [[NSMutableArray alloc] init];
 
             // Iterate over each text block.
-            for (GMVTextBlockFeature *textBlock in features) {
+            for (MLKTextBlock *textBlock in result.blocks) {
                 count++;
 
                 //Block Text
-                [blocktext addObject:textBlock.value];
+                [blocktext addObject:textBlock.text];
                 
                 //Block Language
-                if( textBlock.language ){
+                if( textBlock.recognizedLanguages && textBlock.recognizedLanguages[0] && textBlock.recognizedLanguages[0].languageCode){
                     // do something if object isn't nil
-                    [blocklanguages addObject:textBlock.language];
+                    [blocklanguages addObject:textBlock.recognizedLanguages[0].languageCode];
                 } else {
                     // initialize object and do something
                     [blocklanguages addObject:[NSNull null]];
@@ -146,10 +174,10 @@
                 [blockpoints addObject:bpoobj];
                 
                 //Block Frame
-                CGFloat xfloat =  textBlock.bounds.origin.x;
-                CGFloat yfloat =  textBlock.bounds.origin.y;
-                CGFloat heightfloat =  textBlock.bounds.size.height;
-                CGFloat widthfloat =  textBlock.bounds.size.width;
+                CGFloat xfloat =  textBlock.frame.origin.x;
+                CGFloat yfloat =  textBlock.frame.origin.y;
+                CGFloat heightfloat =  textBlock.frame.size.height; //bounds.size.height;
+                CGFloat widthfloat =  textBlock.frame.size.width;
                 
                 NSString *x = [NSString stringWithFormat:@"%f",xfloat];
                 NSString *y = [NSString stringWithFormat:@"%f",yfloat];
@@ -166,15 +194,15 @@
                 
                 
                 // For each text block, iterate over each line.
-                for (GMVTextLineFeature *textLine in textBlock.lines) {
+                for (MLKTextLine *textLine in textBlock.lines) {
                 
                     //Line Text
-                    [linetext addObject:textLine.value];
+                    [linetext addObject:textLine.text];
                     
                     //Line Language
-                    if( textLine.language ){
+                    if( textBlock.recognizedLanguages && textBlock.recognizedLanguages[0] && textBlock.recognizedLanguages[0].languageCode ){
                         // do something if object isn't nil
-                        [linelanguages addObject:textLine.language];
+                        [linelanguages addObject:textLine.recognizedLanguages[0].languageCode];
                     } else {
                         // initialize object and do something
                         [linelanguages addObject:[NSNull null]];
@@ -206,10 +234,10 @@
                     [linepoints addObject:lpoobj];
                     
                     //Line Frame
-                    CGFloat xfloat =  textLine.bounds.origin.x;
-                    CGFloat yfloat =  textLine.bounds.origin.y;
-                    CGFloat heightfloat =  textLine.bounds.size.height;
-                    CGFloat widthfloat =  textLine.bounds.size.width;
+                    CGFloat xfloat =  textLine.frame.origin.x;
+                    CGFloat yfloat =  textLine.frame.origin.y;
+                    CGFloat heightfloat =  textLine.frame.size.height;
+                    CGFloat widthfloat =  textLine.frame.size.width;
                     
                     NSString *x = [NSString stringWithFormat:@"%f",xfloat];
                     NSString *y = [NSString stringWithFormat:@"%f",yfloat];
@@ -226,15 +254,15 @@
                     
                     
                     // For each line, iterate over each word.
-                    for (GMVTextElementFeature *textElement in textLine.elements) {
+                    for (MLKTextElement *textElement in textLine.elements) {
 
                         //Word Text
-                        [wordtext addObject:textElement.value];
+                        [wordtext addObject:textElement.text];
                         
                         //Word Language
-                        if( textLine.language ){
+                        if( textBlock.recognizedLanguages && textBlock.recognizedLanguages[0] && textBlock.recognizedLanguages[0].languageCode ){
                             // do something if object isn't nil
-                            [wordlanguages addObject:textLine.language];
+                            [wordlanguages addObject:textLine.recognizedLanguages[0].languageCode];
                         } else {
                             // initialize object and do something
                             [wordlanguages addObject:[NSNull null]];
@@ -265,10 +293,10 @@
                         [wordpoints addObject:wpoobj];
                         
                         //Word Frame
-                        CGFloat xfloat =  textElement.bounds.origin.x;
-                        CGFloat yfloat =  textElement.bounds.origin.y;
-                        CGFloat heightfloat =  textElement.bounds.size.height;
-                        CGFloat widthfloat =  textElement.bounds.size.width;
+                        CGFloat xfloat =  textElement.frame.origin.x;
+                        CGFloat yfloat =  textElement.frame.origin.y;
+                        CGFloat heightfloat =  textElement.frame.size.height;
+                        CGFloat widthfloat =  textElement.frame.size.width;
                         
                         NSString *x = [NSString stringWithFormat:@"%f",xfloat];
                         NSString *y = [NSString stringWithFormat:@"%f",yfloat];
@@ -301,7 +329,7 @@
                 CDVPluginResult* resultcor = [CDVPluginResult
                                               resultWithStatus:CDVCommandStatus_OK
                                               messageAsDictionary:resultobj];
-                [self.commandDelegate sendPluginResult:resultcor callbackId:_commandglo.callbackId];
+                [self.commandDelegate sendPluginResult:resultcor callbackId:self->_commandglo.callbackId];
             }
             else
             {
@@ -340,15 +368,19 @@
                 CDVPluginResult* resultcor = [CDVPluginResult
                                               resultWithStatus:CDVCommandStatus_OK
                                               messageAsDictionary:resultobj];
-                [self.commandDelegate sendPluginResult:resultcor callbackId:_commandglo.callbackId];
+                [self.commandDelegate sendPluginResult:resultcor callbackId:self->_commandglo.callbackId];
             }
+                
+
+                }];
+
         }
         else
         {
             CDVPluginResult* result = [CDVPluginResult
                                        resultWithStatus:CDVCommandStatus_ERROR
                                        messageAsString:@"Image was null"];
-            [self.commandDelegate sendPluginResult:result callbackId:_commandglo.callbackId];
+            [self.commandDelegate sendPluginResult:result callbackId:self->_commandglo.callbackId];
         }
     }];
 }
@@ -399,24 +431,11 @@
 
 -(NSData *)retrieveAssetDataPhotosFramework:(NSURL *)urlMedia
 {
-    __block NSData *iData = nil;
+    NSData *data = [NSData dataWithContentsOfURL:urlMedia];
     
-    PHFetchResult *result = [PHAsset fetchAssetsWithALAssetURLs:@[urlMedia] options:nil];
-    PHAsset *asset = [result firstObject];
-    if (asset != nil)
+    if (data != nil)
     {
-        PHImageManager *imageManager = [PHImageManager defaultManager];
-        PHImageRequestOptions *options = [[PHImageRequestOptions alloc]init];
-        options.synchronous = YES;
-        options.version = PHImageRequestOptionsVersionCurrent;
-        
-        @autoreleasepool {
-            [imageManager requestImageDataForAsset:asset options:options resultHandler:^(NSData *imageData, NSString *dataUTI, UIImageOrientation orientation, NSDictionary *info) {
-                iData = [imageData copy];          
-            }];
-        }
-        //assert(iData.length != 0);
-        return iData;
+        return data;
     }
     else
     {
@@ -426,3 +445,4 @@
 }
 
 @end
+
